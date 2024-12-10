@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Downloader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8">YouTube Video Downloader</h1>
+        
+        <div class="max-w-2xl mx-auto">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="mb-4">
+                    <input type="text" 
+                           id="videoUrl" 
+                           placeholder="Enter YouTube URL" 
+                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <button onclick="getVideoInfo()" 
+                        class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                    Get Video Info
+                </button>
+            </div>
+
+            <div id="videoInfo" class="mt-6 bg-white rounded-lg shadow-md p-6 hidden">
+                <div id="videoDetails" class="mb-4">
+                    <img id="thumbnail" class="w-full rounded-lg mb-4">
+                    <h2 id="videoTitle" class="text-xl font-semibold mb-2"></h2>
+                </div>
+
+                <div id="formatsList" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function getVideoId(url) {
+            const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+            const match = url.match(regex);
+            return match ? match[1] : null;
+        }
+
+        async function getVideoInfo() {
+            const url = document.getElementById('videoUrl').value;
+            const videoId = getVideoId(url);
+            
+            if (!videoId) {
+                alert('Invalid YouTube URL');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/info/${videoId}`);
+                const data = await response.json();
+                
+                document.getElementById('videoInfo').classList.remove('hidden');
+                document.getElementById('thumbnail').src = data.thumbnail;
+                document.getElementById('videoTitle').textContent = data.title;
+                
+                const formatsList = document.getElementById('formatsList');
+                formatsList.innerHTML = '';
+                
+                data.formats.forEach(format => {
+                    const size = (format.filesize / (1024 * 1024)).toFixed(2);
+                    const button = document.createElement('button');
+                    button.className = 'w-full bg-gray-100 p-3 rounded-lg hover:bg-gray-200 transition-colors text-left';
+                    button.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <span>${format.resolution} (${format.ext})</span>
+                            <span>${size} MB</span>
+                        </div>
+                    `;
+                    button.onclick = () => downloadVideo(videoId, format.format_id);
+                    formatsList.appendChild(button);
+                });
+            } catch (error) {
+                alert('Error fetching video info');
+            }
+        }
+
+        function downloadVideo(videoId, formatId) {
+            window.location.href = `/download/${videoId}/${formatId}`;
+        }
+    </script>
+</body>
+</html> 
